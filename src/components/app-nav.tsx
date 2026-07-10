@@ -29,7 +29,7 @@ export function AppNav() {
         </nav>
         <div className="mt-auto border-t border-[#e6e6ed] pt-4">
           <Link href="/settings" className={`flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium ${pathname === "/settings" ? "bg-[#050038] text-white" : "text-[#52526a] hover:bg-[#f4f4f8]"}`}><SettingsIcon className="h-5 w-5"/>管理</Link>
-          <div className="mt-5 flex items-center gap-3 px-3 text-sm text-[#52526a]"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#f5c2e7] font-medium text-[#050038]">Y</span><span>Yui&apos;s studio</span></div>
+          <div className="mt-5 flex items-center gap-3 px-3 text-sm text-[#52526a]"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#f5c2e7] font-medium text-[#050038]">S</span><span>Seika&apos;s studio</span></div>
         </div>
       </aside>
       <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[74px] items-center justify-around border-t border-[#dedee8] bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
