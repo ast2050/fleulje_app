@@ -11,6 +11,13 @@ const items = [
   { href: "/history", label: "履歴", icon: ClockIcon },
 ];
 
+// スマホの下部タブ用。サイドバー（PC）では管理を左下に置くが、
+// スマホではここに5個目のタブとして出さないと管理画面へ行けない。
+const mobileItems = [
+  ...items,
+  { href: "/settings", label: "管理", icon: SettingsIcon },
+];
+
 export function AppNav() {
   const pathname = usePathname();
 
@@ -33,7 +40,7 @@ export function AppNav() {
         </div>
       </aside>
       <nav className="fixed inset-x-0 bottom-0 z-30 flex h-[74px] items-center justify-around border-t border-[#dedee8] bg-white/95 px-2 pb-[max(8px,env(safe-area-inset-bottom))] pt-2 backdrop-blur lg:hidden">
-        {items.map(({ href, label, icon: Icon }) => {
+        {mobileItems.map(({ href, label, icon: Icon }) => {
           const active = pathname === href;
           return <Link key={href} href={href} className={`flex min-w-14 flex-col items-center gap-1 text-[10px] font-medium ${active ? "text-[#050038]" : "text-[#77778d]"}`}><span className={`grid h-7 w-10 place-items-center rounded-full ${active ? "bg-[#ffd02f]" : ""}`}><Icon className="h-[19px] w-[19px]"/></span>{label}</Link>;
         })}
