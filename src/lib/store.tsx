@@ -17,6 +17,7 @@ import type {
   CartItem,
   Category,
   Gender,
+  Inventory,
   Location,
   Product,
   Sale,
@@ -76,6 +77,37 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
+/** 在庫の場所を表す文字列: "base" | "event" | "consignment:{locationId}" */
+export type StockLocation = string;
+
+/** 操作の結果（UIでメッセージ表示に使う） */
+export interface ActionResult {
+  ok: boolean;
+  message?: string;
+}
+
+/** 指定の場所の在庫数を読む */
+function stockAt(inv: Inventory, loc: StockLocation): number {
+  if (loc === "base" || loc === "event") return inv[loc];
+  if (loc.startsWith("consignment:")) {
+    return inv.consignments[loc.split(":")[1]] ?? 0;
+  }
+  return 0;
+}
+
+/** 指定の場所の在庫数を書き込む（委託先が0以下なら削除） */
+function setStock(inv: Inventory, loc: StockLocation, value: number): void {
+  if (loc === "base" || loc === "event") {
+    inv[loc] = value;
+    return;
+  }
+  if (loc.startsWith("consignment:")) {
+    const id = loc.split(":")[1];
+    if (value <= 0) delete inv.consignments[id];
+    else inv.consignments[id] = value;
+  }
+}
+
 /** 商品追加モーダルからの入力 */
 export interface NewProductInput {
   name: string;
@@ -99,6 +131,23 @@ interface StoreValue {
   checkoutEventSale: (cart: CartItem[], gender: Gender, age: AgeBand) => void;
   /** 商品を新規登録する */
   addProduct: (input: NewProductInput) => void;
+  /** 在庫を1件だけ増減する（±ボタン） */
+  adjustInventory: (
+    productId: number,
+    location: StockLocation,
+    delta: number,
+  ) => void;
+  /** 制作・入庫（自宅在庫を増やす） */
+  addProduction: (productId: number, quantity: number) => void;
+  /** 在庫移動（場所間） */
+  moveInventory: (
+    productId: number,
+    from: StockLocation,
+    to: StockLocation,
+    quantity: number,
+  ) => ActionResult;
+  /** イベント終了（イベント在庫をすべて自宅へ戻す） */
+  endEvent: () => ActionResult;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -191,6 +240,101 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const adjustInventory = useCallback(
+    (productId: number, location: StockLocation, delta: number) => {
+      setProducts((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== productId) return p;
+          const inv: Inventory = {
+            ...p.inventory,
+            consignments: { ...p.inventory.consignments },
+          };
+          const value = stockAt(inv, location) + delta;
+          if (value < 0) return p; // 0未満にはしない（変更なし）
+          setStock(inv, location, value);
+          return { ...p, inventory: inv };
+        });
+        saveProducts(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const addProduction = useCallback((productId: number, quantity: number) => {
+    if (quantity < 1) return;
+    setProducts((prev) => {
+      const next = prev.map((p) =>
+        p.id === productId
+          ? {
+              ...p,
+              inventory: { ...p.inventory, base: p.inventory.base + quantity },
+            }
+          : p,
+      );
+      saveProducts(next);
+      return next;
+    });
+  }, []);
+
+  const moveInventory = useCallback(
+    (
+      productId: number,
+      from: StockLocation,
+      to: StockLocation,
+      quantity: number,
+    ): ActionResult => {
+      if (from === to)
+        return { ok: false, message: "同じ場所へは移動できません" };
+      if (quantity < 1)
+        return { ok: false, message: "数量を正しく入力してください" };
+      const product = products.find((p) => p.id === productId);
+      if (!product) return { ok: false, message: "商品が見つかりません" };
+      if (stockAt(product.inventory, from) < quantity)
+        return { ok: false, message: "移動元の在庫が不足しています" };
+
+      setProducts((prev) => {
+        const next = prev.map((p) => {
+          if (p.id !== productId) return p;
+          const inv: Inventory = {
+            ...p.inventory,
+            consignments: { ...p.inventory.consignments },
+          };
+          setStock(inv, from, stockAt(inv, from) - quantity);
+          setStock(inv, to, stockAt(inv, to) + quantity);
+          return { ...p, inventory: inv };
+        });
+        saveProducts(next);
+        return next;
+      });
+      return { ok: true };
+    },
+    [products],
+  );
+
+  const endEvent = useCallback((): ActionResult => {
+    const hasEventStock = products.some((p) => p.inventory.event > 0);
+    if (!hasEventStock)
+      return { ok: false, message: "イベント会場に在庫がありません" };
+    setProducts((prev) => {
+      const next = prev.map((p) =>
+        p.inventory.event > 0
+          ? {
+              ...p,
+              inventory: {
+                ...p.inventory,
+                base: p.inventory.base + p.inventory.event,
+                event: 0,
+              },
+            }
+          : p,
+      );
+      saveProducts(next);
+      return next;
+    });
+    return { ok: true };
+  }, [products]);
+
   return (
     <StoreContext.Provider
       value={{
@@ -200,6 +344,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         sales,
         checkoutEventSale,
         addProduct,
+        adjustInventory,
+        addProduction,
+        moveInventory,
+        endEvent,
       }}
     >
       {children}

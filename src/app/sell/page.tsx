@@ -3,6 +3,7 @@
 import { useMemo, useState } from "react";
 import { BagIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
+import { InventoryTab } from "@/components/sell/inventory-tab";
 import { useStore, type NewProductInput } from "@/lib/store";
 import { calcChange, cartTotal, formatYen } from "@/lib/money";
 import {
@@ -306,7 +307,7 @@ export default function SellPage() {
         </div>
       )}
 
-      {tab === "inventory" && <ComingSoon label="在庫" />}
+      {tab === "inventory" && <InventoryTab onNotify={showToast} />}
       {tab === "consignment" && <ComingSoon label="委託" />}
 
       {checkoutOpen && (
