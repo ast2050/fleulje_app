@@ -125,7 +125,7 @@ export default function SellPage() {
     <>
       <PageHeader eyebrow="SELL" title="売る" />
 
-      <div className="mb-7 flex w-full gap-1 overflow-x-auto rounded-full bg-[#ececf1] p-1 sm:w-fit">
+      <div className="mb-7 flex w-fit gap-1 overflow-x-auto rounded-full bg-[#ececf1] p-1">
         {TABS.map((t) => (
           <button
             key={t.value}
