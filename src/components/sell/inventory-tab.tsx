@@ -1,11 +1,26 @@
 "use client";
 
 // 「売る」画面の在庫タブ。
-// 場所別（自宅・イベント会場・委託先）の在庫一覧＋/−調整、制作・入庫、在庫移動、イベント終了。
+// 場所（自宅・イベント会場・委託先）を選んでアコーディオンで開き、取り扱い商品と在庫数を確認する。
+// 各在庫行で±調整、上部から制作・入庫／在庫移動／イベント終了ができる。
+// 委託先の在庫もこの画面でまとめて管理する（委託タブは廃止）。
 
 import { useState } from "react";
+import { BagIcon } from "@/components/icons";
 import { useStore, type StockLocation } from "@/lib/store";
-import type { Product } from "@/types";
+import type { Category, Product } from "@/types";
+
+/** カテゴリごとの淡い色（モックの世界観に合わせる） */
+const CATEGORY_TONE: Record<Category, string> = {
+  sachet: "bg-[#bceee9]",
+  candle: "bg-[#f5c2e7]",
+  other: "bg-[#fff0b3]",
+};
+const CATEGORY_LABEL: Record<Category, string> = {
+  sachet: "サシェ",
+  candle: "キャンドル",
+  other: "その他",
+};
 
 /** 指定場所の在庫数 */
 function stockOf(p: Product, loc: StockLocation): number {
@@ -15,16 +30,70 @@ function stockOf(p: Product, loc: StockLocation): number {
   return 0;
 }
 
+/** 全委託先を合わせた在庫数 */
+function consignmentTotalOf(p: Product): number {
+  return Object.values(p.inventory.consignments).reduce((a, b) => a + b, 0);
+}
+
+function ProductThumb({ tone }: { tone: string }) {
+  return (
+    <span
+      className={`grid h-11 w-11 shrink-0 place-items-center rounded-[14px] ${tone}`}
+    >
+      <BagIcon className="h-5 w-5" />
+    </span>
+  );
+}
+
+/** ± の在庫調整ボタン */
+function QtyStepper({
+  qty,
+  onMinus,
+  onPlus,
+}: {
+  qty: number;
+  onMinus: () => void;
+  onPlus: () => void;
+}) {
+  return (
+    <div className="flex items-center gap-2">
+      <button
+        onClick={onMinus}
+        aria-label="減らす"
+        className="grid h-8 w-8 place-items-center rounded-full border border-[#c7c7de] bg-white text-base leading-none"
+      >
+        −
+      </button>
+      <span className="w-12 text-center text-sm font-bold">{qty}個</span>
+      <button
+        onClick={onPlus}
+        aria-label="増やす"
+        className="grid h-8 w-8 place-items-center rounded-full border border-[#c7c7de] bg-white text-base leading-none"
+      >
+        +
+      </button>
+    </div>
+  );
+}
+
+type Place = {
+  id: StockLocation;
+  label: string;
+  tone: string;
+  sub: string;
+  low?: boolean;
+  consignment?: boolean;
+};
+
 export function InventoryTab({ onNotify }: { onNotify: (m: string) => void }) {
   const { ready, products, locations, adjustInventory, endEvent } = useStore();
+  const [openLoc, setOpenLoc] = useState<StockLocation>("base");
   const [productionOpen, setProductionOpen] = useState(false);
   const [moveOpen, setMoveOpen] = useState(false);
 
   function handleEndEvent() {
     if (
-      !window.confirm(
-        "イベントを終了し、会場の在庫をすべて自宅へ戻しますか？",
-      )
+      !window.confirm("イベントを終了し、会場の在庫をすべて自宅へ戻しますか？")
     )
       return;
     const r = endEvent();
@@ -48,101 +117,125 @@ export function InventoryTab({ onNotify }: { onNotify: (m: string) => void }) {
     );
   }
 
-  const groups: { title: string; loc: StockLocation; low: boolean }[] = [
-    { title: "🏠 自宅", loc: "base", low: false },
-    { title: "🎪 イベント会場", loc: "event", low: true },
-    ...locations.map((l) => ({
-      title: `🏪 ${l.name}`,
-      loc: `consignment:${l.id}` as StockLocation,
-      low: false,
-    })),
+  const places: Place[] = [
+    { id: "base", label: "自宅", tone: "bg-[#f5c2e7]", sub: "商品ごとの在庫を確認" },
+    {
+      id: "event",
+      label: "イベント会場",
+      tone: "bg-[#fff0b3]",
+      sub: "商品ごとの在庫を確認",
+      low: true,
+    },
+    {
+      id: "consignment",
+      label: "委託先",
+      tone: "bg-[#bceee9]",
+      sub: "店舗ごとの委託在庫を確認",
+      consignment: true,
+    },
   ];
 
+  const totalOf = (place: Place) =>
+    products.reduce(
+      (s, p) =>
+        s + (place.consignment ? consignmentTotalOf(p) : stockOf(p, place.id)),
+      0,
+    );
+
   return (
-    <div className="space-y-7">
-      <div className="flex flex-wrap gap-2">
-        <button
-          onClick={() => setProductionOpen(true)}
-          className="inline-flex h-10 items-center rounded-full bg-[#050038] px-4 text-sm font-medium text-white"
-        >
-          制作・入庫
-        </button>
-        <button
-          onClick={() => setMoveOpen(true)}
-          className="inline-flex h-10 items-center rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
-        >
-          在庫を移動
-        </button>
-        <button
-          onClick={handleEndEvent}
-          className="inline-flex h-10 items-center rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
-        >
-          イベント終了
-        </button>
-      </div>
+    <div className="space-y-8">
+      <section className="flex flex-wrap items-end justify-between gap-4">
+        <div>
+          <h2 className="text-xl font-medium tracking-[-0.04em]">在庫管理</h2>
+          <p className="mt-1 text-sm text-[#77778d]">
+            在庫の確認・入庫・移動をまとめて管理します。
+          </p>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <button
+            onClick={() => setProductionOpen(true)}
+            className="inline-flex h-10 items-center rounded-full bg-[#050038] px-4 text-sm font-medium text-white"
+          >
+            制作・入庫
+          </button>
+          <button
+            onClick={() => setMoveOpen(true)}
+            className="inline-flex h-10 items-center rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
+          >
+            在庫を移動
+          </button>
+          <button
+            onClick={handleEndEvent}
+            className="inline-flex h-10 items-center rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
+          >
+            イベント終了
+          </button>
+        </div>
+      </section>
 
-      <div className="max-w-3xl space-y-6">
-        {groups.map((g) => {
-          const items = products.filter((p) => stockOf(p, g.loc) > 0);
-          return (
-            <div key={g.loc}>
-              <h3 className="mb-3 px-1 text-sm font-semibold">{g.title}</h3>
-              {items.length === 0 ? (
-                <div className="px-1 text-xs text-[#77778d]">在庫なし</div>
-              ) : (
-                <div className="space-y-2">
-                  {items.map((p) => {
-                    const qty = stockOf(p, g.loc);
-                    const isLow = g.low && qty <= p.alertStock;
-                    return (
-                      <div
-                        key={p.id}
-                        className={`flex items-center justify-between rounded-[16px] border bg-white p-3 ${
-                          isLow ? "border-[#f0b429]" : "border-[#dedee8]"
-                        }`}
-                      >
-                        <div className="min-w-0">
-                          <span className="text-sm font-medium">{p.name}</span>
-                          {isLow && (
-                            <span className="ml-2 rounded-full bg-[#fff0b3] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d00]">
-                              残りわずか
-                            </span>
-                          )}
-                        </div>
-                        <div className="flex items-center gap-2">
-                          <button
-                            onClick={() => adjustInventory(p.id, g.loc, -1)}
-                            className="grid h-8 w-8 place-items-center rounded-full border border-[#c7c7de] bg-white text-base leading-none"
-                            aria-label="減らす"
-                          >
-                            −
-                          </button>
-                          <span className="w-12 text-center text-sm font-bold">
-                            {qty}個
-                          </span>
-                          <button
-                            onClick={() => adjustInventory(p.id, g.loc, 1)}
-                            className="grid h-8 w-8 place-items-center rounded-full border border-[#c7c7de] bg-white text-base leading-none"
-                            aria-label="増やす"
-                          >
-                            +
-                          </button>
-                        </div>
-                      </div>
-                    );
-                  })}
-                </div>
-              )}
-            </div>
-          );
-        })}
+      <section>
+        <div className="mb-4">
+          <h2 className="text-xl font-medium tracking-[-0.04em]">場所別の在庫</h2>
+          <p className="mt-1 text-sm text-[#77778d]">
+            場所を選択すると、取り扱い商品と在庫数を確認できます。
+          </p>
+        </div>
 
-        {locations.length === 0 && (
-          <div className="rounded-xl bg-[#f2f2f6] p-4 text-center text-xs text-[#77778d]">
-            委託先を追加すると、ここに委託在庫が表示されます（委託タブ・管理画面で登録予定）。
-          </div>
-        )}
-      </div>
+        <div className="space-y-3">
+          {places.map((place) => {
+            const isOpen = openLoc === place.id;
+            return (
+              <article
+                key={place.id}
+                className={`overflow-hidden rounded-[24px] border bg-white transition ${
+                  isOpen ? "border-[#050038]" : "border-[#dedee8]"
+                }`}
+              >
+                <button
+                  type="button"
+                  onClick={() => setOpenLoc(isOpen ? "" : place.id)}
+                  aria-expanded={isOpen}
+                  className="flex w-full items-center justify-between gap-4 p-5 text-left sm:px-6"
+                >
+                  <div className="flex items-center gap-3">
+                    <span
+                      className={`grid h-10 w-10 place-items-center rounded-full text-sm ${place.tone}`}
+                    >
+                      ●
+                    </span>
+                    <div>
+                      <h3 className="font-medium">{place.label}</h3>
+                      <p className="mt-0.5 text-xs text-[#77778d]">{place.sub}</p>
+                    </div>
+                  </div>
+                  <div className="flex items-center gap-3">
+                    <span className="text-sm font-semibold">
+                      {totalOf(place)}個
+                    </span>
+                    <span
+                      className={`text-lg text-[#77778d] transition-transform ${
+                        isOpen ? "rotate-180" : ""
+                      }`}
+                    >
+                      ⌄
+                    </span>
+                  </div>
+                </button>
+
+                {isOpen && (
+                  <div className="border-t border-[#e6e6ed] p-5 sm:p-6">
+                    {place.consignment ? (
+                      <ConsignmentPanel />
+                    ) : (
+                      <LocationTable place={place} />
+                    )}
+                  </div>
+                )}
+              </article>
+            );
+          })}
+        </div>
+      </section>
 
       {productionOpen && (
         <ProductionModal
@@ -165,6 +258,119 @@ export function InventoryTab({ onNotify }: { onNotify: (m: string) => void }) {
       )}
     </div>
   );
+
+  /** 自宅・イベント会場の在庫テーブル（±調整つき） */
+  function LocationTable({ place }: { place: Place }) {
+    const items = products.filter((p) => stockOf(p, place.id) > 0);
+    if (items.length === 0) {
+      return <p className="text-sm text-[#77778d]">在庫なし</p>;
+    }
+    return (
+      <div className="overflow-x-auto rounded-[20px] border border-[#dedee8]">
+        <table className="w-full min-w-[440px] border-collapse text-left">
+          <tbody>
+            {items.map((p) => {
+              const qty = stockOf(p, place.id);
+              const isLow = !!place.low && qty <= p.alertStock;
+              return (
+                <tr
+                  key={p.id}
+                  className="border-b border-[#eeeef3] last:border-0"
+                >
+                  <td className="px-4 py-3">
+                    <div className="flex items-center gap-3">
+                      <ProductThumb tone={CATEGORY_TONE[p.category]} />
+                      <div className="min-w-0">
+                        <p className="text-sm font-medium">
+                          {p.name}
+                          {isLow && (
+                            <span className="ml-2 rounded-full bg-[#fff0b3] px-2 py-0.5 text-[10px] font-semibold text-[#8a6d00]">
+                              残りわずか
+                            </span>
+                          )}
+                        </p>
+                        <p className="mt-0.5 text-xs text-[#77778d]">
+                          {CATEGORY_LABEL[p.category]}
+                        </p>
+                      </div>
+                    </div>
+                  </td>
+                  <td className="px-4 py-3">
+                    <div className="flex justify-end">
+                      <QtyStepper
+                        qty={qty}
+                        onMinus={() => adjustInventory(p.id, place.id, -1)}
+                        onPlus={() => adjustInventory(p.id, place.id, 1)}
+                      />
+                    </div>
+                  </td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    );
+  }
+
+  /** 委託先ごとの委託在庫パネル（店舗カード・±調整つき） */
+  function ConsignmentPanel() {
+    if (locations.length === 0) {
+      return (
+        <div className="rounded-[16px] bg-[#f2f2f6] p-5 text-center text-xs leading-5 text-[#77778d]">
+          委託先がまだ登録されていません。
+          <br />
+          「管理」画面で委託先を追加すると、ここに店舗ごとの委託在庫が表示されます。
+        </div>
+      );
+    }
+    return (
+      <div className="grid gap-4 lg:grid-cols-2">
+        {locations.map((l) => {
+          const locKey: StockLocation = `consignment:${l.id}`;
+          const items = products.filter(
+            (p) => (p.inventory.consignments[l.id] ?? 0) > 0,
+          );
+          const sum = items.reduce(
+            (s, p) => s + (p.inventory.consignments[l.id] ?? 0),
+            0,
+          );
+          return (
+            <section key={l.id} className="rounded-[20px] bg-[#f7f7fa] p-4">
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#bceee9] text-sm font-medium">
+                    {l.name.charAt(0)}
+                  </span>
+                  <h4 className="text-sm font-medium">{l.name}</h4>
+                </div>
+                <span className="text-sm font-semibold">{sum}個</span>
+              </div>
+              {items.length === 0 ? (
+                <p className="mt-3 text-xs text-[#77778d]">在庫なし</p>
+              ) : (
+                <ul className="mt-4 space-y-2 border-t border-[#dedee8] pt-3">
+                  {items.map((p) => (
+                    <li
+                      key={p.id}
+                      className="flex items-center justify-between gap-3"
+                    >
+                      <span className="min-w-0 truncate text-sm">{p.name}</span>
+                      <QtyStepper
+                        qty={p.inventory.consignments[l.id] ?? 0}
+                        onMinus={() => adjustInventory(p.id, locKey, -1)}
+                        onPlus={() => adjustInventory(p.id, locKey, 1)}
+                      />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          );
+        })}
+      </div>
+    );
+  }
 }
 
 const selectClass =

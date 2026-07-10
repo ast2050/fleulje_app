@@ -17,12 +17,11 @@ import {
   type Product,
 } from "@/types";
 
-type Tab = "sell" | "inventory" | "consignment";
+type Tab = "sell" | "inventory";
 
 const TABS: { value: Tab; label: string }[] = [
   { value: "sell", label: "販売" },
   { value: "inventory", label: "在庫" },
-  { value: "consignment", label: "委託" },
 ];
 
 // カテゴリごとの淡い色（モックの世界観に合わせる）
@@ -308,7 +307,6 @@ export default function SellPage() {
       )}
 
       {tab === "inventory" && <InventoryTab onNotify={showToast} />}
-      {tab === "consignment" && <ComingSoon label="委託" />}
 
       {checkoutOpen && (
         <CheckoutModal
@@ -337,17 +335,6 @@ export default function SellPage() {
         </div>
       )}
     </>
-  );
-}
-
-function ComingSoon({ label }: { label: string }) {
-  return (
-    <div className="rounded-[24px] border border-dashed border-[#c7c7de] bg-white py-20 text-center">
-      <p className="text-sm font-medium">{label}タブは準備中です</p>
-      <p className="mt-1 text-xs text-[#77778d]">
-        次のタスクで実装します。
-      </p>
-    </div>
   );
 }
 
