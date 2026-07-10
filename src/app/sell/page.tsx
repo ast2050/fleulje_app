@@ -3,7 +3,6 @@
 import { useMemo, useState } from "react";
 import { BagIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
-import { InventoryTab } from "@/components/sell/inventory-tab";
 import { useStore, type NewProductInput } from "@/lib/store";
 import { calcChange, cartTotal, formatYen } from "@/lib/money";
 import {
@@ -17,13 +16,6 @@ import {
   type Product,
 } from "@/types";
 
-type Tab = "sell" | "inventory";
-
-const TABS: { value: Tab; label: string }[] = [
-  { value: "sell", label: "販売" },
-  { value: "inventory", label: "在庫" },
-];
-
 // カテゴリごとの淡い色（モックの世界観に合わせる）
 const CATEGORY_TONE: Record<Category, string> = {
   sachet: "bg-[#bceee9]",
@@ -33,7 +25,6 @@ const CATEGORY_TONE: Record<Category, string> = {
 
 export default function SellPage() {
   const { ready, products, checkoutEventSale, addProduct } = useStore();
-  const [tab, setTab] = useState<Tab>("sell");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -125,24 +116,7 @@ export default function SellPage() {
     <>
       <PageHeader eyebrow="SELL" title="売る" />
 
-      <div className="mb-7 flex w-fit gap-1 overflow-x-auto rounded-full bg-[#ececf1] p-1">
-        {TABS.map((t) => (
-          <button
-            key={t.value}
-            onClick={() => setTab(t.value)}
-            className={`h-9 shrink-0 rounded-full px-5 text-sm font-medium transition ${
-              tab === t.value
-                ? "bg-[#050038] text-white"
-                : "text-[#52526a] hover:text-[#050038]"
-            }`}
-          >
-            {t.label}
-          </button>
-        ))}
-      </div>
-
-      {tab === "sell" && (
-        <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
+      <div className="grid gap-5 xl:grid-cols-[minmax(0,1fr)_380px]">
           <section>
             <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
               <div>
@@ -304,9 +278,6 @@ export default function SellPage() {
             </p>
           </aside>
         </div>
-      )}
-
-      {tab === "inventory" && <InventoryTab onNotify={showToast} />}
 
       {checkoutOpen && (
         <CheckoutModal

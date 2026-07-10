@@ -28,6 +28,7 @@ import {
   loadLocations,
   loadProducts,
   loadSales,
+  saveLocations,
   saveProducts,
   saveSales,
 } from "@/lib/storage";
@@ -121,6 +122,16 @@ export interface NewProductInput {
   displayOrder?: number;
 }
 
+/** 商品編集モーダルからの入力（在庫は含まない） */
+export interface ProductEdit {
+  name: string;
+  price: number;
+  category: Category;
+  alertStock: number;
+  displayOrder: number;
+  active: boolean;
+}
+
 interface StoreValue {
   /** localStorage の読み込みが完了したか（描画のちらつき防止に使う） */
   ready: boolean;
@@ -131,6 +142,14 @@ interface StoreValue {
   checkoutEventSale: (cart: CartItem[], gender: Gender, age: AgeBand) => void;
   /** 商品を新規登録する */
   addProduct: (input: NewProductInput) => void;
+  /** 商品マスタを編集する（在庫以外） */
+  updateProduct: (productId: number, edit: ProductEdit) => void;
+  /** 商品を削除する */
+  deleteProduct: (productId: number) => void;
+  /** 委託先を追加する */
+  addLocation: (name: string) => void;
+  /** 委託先を削除する（残った委託在庫は自宅へ戻す） */
+  deleteLocation: (locationId: number) => ActionResult;
   /** 在庫を1件だけ増減する（±ボタン） */
   adjustInventory: (
     productId: number,
@@ -240,6 +259,67 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  const updateProduct = useCallback((productId: number, edit: ProductEdit) => {
+    setProducts((prev) => {
+      const next = prev.map((p) =>
+        p.id === productId ? { ...p, ...edit } : p,
+      );
+      saveProducts(next);
+      return next;
+    });
+  }, []);
+
+  const deleteProduct = useCallback((productId: number) => {
+    setProducts((prev) => {
+      const next = prev.filter((p) => p.id !== productId);
+      saveProducts(next);
+      return next;
+    });
+  }, []);
+
+  const addLocation = useCallback((name: string) => {
+    const trimmed = name.trim();
+    if (!trimmed) return;
+    setLocations((prev) => {
+      const next: Location[] = [
+        ...prev,
+        { id: createId(), name: trimmed, type: "consignment" },
+      ];
+      saveLocations(next);
+      return next;
+    });
+  }, []);
+
+  const deleteLocation = useCallback((locationId: number): ActionResult => {
+    const key = String(locationId);
+    // その委託先の在庫を自宅へ戻す
+    setProducts((prev) => {
+      const next = prev.map((p) => {
+        const qty = p.inventory.consignments[key] ?? 0;
+        if (qty <= 0) return p;
+        const consignments = { ...p.inventory.consignments };
+        delete consignments[key];
+        return {
+          ...p,
+          inventory: {
+            ...p.inventory,
+            base: p.inventory.base + qty,
+            consignments,
+          },
+        };
+      });
+      saveProducts(next);
+      return next;
+    });
+    // 委託先を一覧から削除
+    setLocations((prev) => {
+      const next = prev.filter((l) => l.id !== locationId);
+      saveLocations(next);
+      return next;
+    });
+    return { ok: true };
+  }, []);
+
   const adjustInventory = useCallback(
     (productId: number, location: StockLocation, delta: number) => {
       setProducts((prev) => {
@@ -344,6 +424,10 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         sales,
         checkoutEventSale,
         addProduct,
+        updateProduct,
+        deleteProduct,
+        addLocation,
+        deleteLocation,
         adjustInventory,
         addProduction,
         moveInventory,
