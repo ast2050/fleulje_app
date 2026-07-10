@@ -3,10 +3,11 @@
 import { useMemo, useState } from "react";
 import { BagIcon, PlusIcon, SearchIcon } from "@/components/icons";
 import { PageHeader } from "@/components/page-header";
-import { useStore } from "@/lib/store";
+import { useStore, type NewProductInput } from "@/lib/store";
 import { calcChange, cartTotal, formatYen } from "@/lib/money";
 import {
   AGE_BANDS,
+  CATEGORIES,
   GENDERS,
   type AgeBand,
   type CartItem,
@@ -31,11 +32,12 @@ const CATEGORY_TONE: Record<Category, string> = {
 };
 
 export default function SellPage() {
-  const { ready, products, checkoutEventSale } = useStore();
+  const { ready, products, checkoutEventSale, addProduct } = useStore();
   const [tab, setTab] = useState<Tab>("sell");
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
+  const [addOpen, setAddOpen] = useState(false);
   const [toast, setToast] = useState<string | null>(null);
 
   function showToast(message: string) {
@@ -152,9 +154,7 @@ export default function SellPage() {
                 </p>
               </div>
               <button
-                onClick={() =>
-                  showToast("商品の追加は「管理」画面で対応予定です")
-                }
+                onClick={() => setAddOpen(true)}
                 className="inline-flex h-10 items-center gap-2 rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
               >
                 <PlusIcon className="h-4 w-4" />
@@ -317,6 +317,17 @@ export default function SellPage() {
         />
       )}
 
+      {addOpen && (
+        <AddProductModal
+          onClose={() => setAddOpen(false)}
+          onAdd={(input) => {
+            addProduct(input);
+            setAddOpen(false);
+            showToast("商品を追加しました");
+          }}
+        />
+      )}
+
       {toast && (
         <div className="fixed inset-x-0 bottom-24 z-50 flex justify-center px-4 lg:bottom-8">
           <div className="rounded-full bg-[#050038] px-5 py-3 text-sm font-medium text-white shadow-[0_8px_24px_rgba(5,0,56,0.25)]">
@@ -335,6 +346,163 @@ function ComingSoon({ label }: { label: string }) {
       <p className="mt-1 text-xs text-[#77778d]">
         次のタスクで実装します。
       </p>
+    </div>
+  );
+}
+
+function AddProductModal({
+  onClose,
+  onAdd,
+}: {
+  onClose: () => void;
+  onAdd: (input: NewProductInput) => void;
+}) {
+  const [name, setName] = useState("");
+  const [price, setPrice] = useState("");
+  const [category, setCategory] = useState<Category>("candle");
+  const [initialStock, setInitialStock] = useState("");
+  const [location, setLocation] = useState<"base" | "event">("event");
+
+  const priceNum = parseInt(price, 10) || 0;
+  const canAdd = name.trim() !== "" && priceNum > 0;
+
+  function handleAdd() {
+    if (!canAdd) return;
+    onAdd({
+      name: name.trim(),
+      price: priceNum,
+      category,
+      initialStock: parseInt(initialStock, 10) || 0,
+      location,
+    });
+  }
+
+  return (
+    <div
+      className="fixed inset-0 z-50 flex items-end justify-center bg-[#050038]/40 p-4 backdrop-blur-sm sm:items-center"
+      onClick={onClose}
+    >
+      <div
+        className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-[0_24px_60px_-12px_rgba(5,0,56,0.4)] sm:p-8"
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="flex items-center justify-between">
+          <h2 className="text-xl font-medium tracking-[-0.04em]">商品を追加</h2>
+          <button
+            onClick={onClose}
+            aria-label="閉じる"
+            className="grid h-9 w-9 place-items-center rounded-full text-lg text-[#77778d] hover:bg-[#f4f4f8]"
+          >
+            ×
+          </button>
+        </div>
+
+        <div className="mt-5 space-y-4">
+          <div>
+            <label className="mb-2 block text-sm font-medium">商品名</label>
+            <input
+              value={name}
+              onChange={(e) => setName(e.target.value)}
+              placeholder="例：Amber mist"
+              autoFocus
+              className="h-12 w-full rounded-xl border border-[#c7c7de] px-3 text-sm outline-none focus:border-[#050038]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">価格</label>
+            <div className="flex h-12 items-center gap-1 rounded-xl border border-[#c7c7de] px-3">
+              <span className="text-[#77778d]">¥</span>
+              <input
+                type="number"
+                inputMode="numeric"
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                placeholder="0"
+                className="h-full flex-1 bg-transparent text-sm font-medium outline-none"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">カテゴリ</label>
+            <div className="grid grid-cols-3 gap-2">
+              {CATEGORIES.map((c) => (
+                <button
+                  key={c.value}
+                  onClick={() => setCategory(c.value)}
+                  className={`h-11 rounded-full text-sm font-medium transition ${
+                    category === c.value
+                      ? "bg-[#050038] text-white"
+                      : "border border-[#d3d3de] text-[#52526a] hover:border-[#050038]"
+                  }`}
+                >
+                  {c.label}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">初期在庫</label>
+            <input
+              type="number"
+              inputMode="numeric"
+              value={initialStock}
+              onChange={(e) => setInitialStock(e.target.value)}
+              placeholder="0"
+              className="h-12 w-full rounded-xl border border-[#c7c7de] px-3 text-sm outline-none focus:border-[#050038]"
+            />
+          </div>
+
+          <div>
+            <label className="mb-2 block text-sm font-medium">
+              置き場所（初期在庫）
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              {(
+                [
+                  { value: "event", label: "イベント会場" },
+                  { value: "base", label: "自宅" },
+                ] as const
+              ).map((l) => (
+                <button
+                  key={l.value}
+                  onClick={() => setLocation(l.value)}
+                  className={`h-11 rounded-full text-sm font-medium transition ${
+                    location === l.value
+                      ? "bg-[#050038] text-white"
+                      : "border border-[#d3d3de] text-[#52526a] hover:border-[#050038]"
+                  }`}
+                >
+                  {l.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        <div className="mt-7 flex gap-3">
+          <button
+            onClick={onClose}
+            className="h-12 flex-1 rounded-full border border-[#b9b9ca] text-sm font-medium"
+          >
+            キャンセル
+          </button>
+          <button
+            onClick={handleAdd}
+            disabled={!canAdd}
+            className="h-12 flex-[1.4] rounded-full bg-[#050038] text-sm font-semibold text-white transition disabled:cursor-not-allowed disabled:opacity-40"
+          >
+            追加する
+          </button>
+        </div>
+        {!canAdd && (
+          <p className="mt-3 text-center text-xs text-[#77778d]">
+            商品名と価格（1以上）を入力してください
+          </p>
+        )}
+      </div>
     </div>
   );
 }

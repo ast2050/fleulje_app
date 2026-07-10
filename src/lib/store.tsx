@@ -12,9 +12,18 @@ import {
   useState,
   type ReactNode,
 } from "react";
-import type { AgeBand, CartItem, Gender, Location, Product, Sale } from "@/types";
+import type {
+  AgeBand,
+  CartItem,
+  Category,
+  Gender,
+  Location,
+  Product,
+  Sale,
+} from "@/types";
 import {
   STORAGE_KEYS,
+  createId,
   loadLocations,
   loadProducts,
   loadSales,
@@ -67,6 +76,19 @@ const SEED_PRODUCTS: Product[] = [
   },
 ];
 
+/** 商品追加モーダルからの入力 */
+export interface NewProductInput {
+  name: string;
+  price: number;
+  category: Category;
+  /** 初期在庫（省略時0） */
+  initialStock?: number;
+  /** 初期在庫を置く場所（省略時 event） */
+  location?: "base" | "event";
+  alertStock?: number;
+  displayOrder?: number;
+}
+
 interface StoreValue {
   /** localStorage の読み込みが完了したか（描画のちらつき防止に使う） */
   ready: boolean;
@@ -75,6 +97,8 @@ interface StoreValue {
   sales: Sale[];
   /** イベント会場での会計（在庫を減らし、販売履歴に記録） */
   checkoutEventSale: (cart: CartItem[], gender: Gender, age: AgeBand) => void;
+  /** 商品を新規登録する */
+  addProduct: (input: NewProductInput) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -143,9 +167,40 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     [],
   );
 
+  const addProduct = useCallback((input: NewProductInput) => {
+    const location = input.location ?? "event";
+    const stock = Math.max(0, input.initialStock ?? 0);
+    const product: Product = {
+      id: createId(),
+      name: input.name,
+      price: input.price,
+      category: input.category,
+      active: true,
+      alertStock: input.alertStock ?? 5,
+      displayOrder: input.displayOrder ?? 999,
+      inventory: {
+        base: location === "base" ? stock : 0,
+        event: location === "event" ? stock : 0,
+        consignments: {},
+      },
+    };
+    setProducts((prev) => {
+      const next = [...prev, product];
+      saveProducts(next);
+      return next;
+    });
+  }, []);
+
   return (
     <StoreContext.Provider
-      value={{ ready, products, locations, sales, checkoutEventSale }}
+      value={{
+        ready,
+        products,
+        locations,
+        sales,
+        checkoutEventSale,
+        addProduct,
+      }}
     >
       {children}
     </StoreContext.Provider>
