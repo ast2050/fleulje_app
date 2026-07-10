@@ -24,7 +24,8 @@ const CATEGORY_TONE: Record<Category, string> = {
 };
 
 export default function SellPage() {
-  const { ready, products, checkoutEventSale, addProduct } = useStore();
+  const { ready, products, checkoutEventSale, addProduct, endEvent } =
+    useStore();
   const [search, setSearch] = useState("");
   const [cart, setCart] = useState<CartItem[]>([]);
   const [checkoutOpen, setCheckoutOpen] = useState(false);
@@ -112,6 +113,13 @@ export default function SellPage() {
     showToast("会計が完了しました");
   }
 
+  function handleEndEvent() {
+    if (!window.confirm("イベントを終了し、会場の在庫をすべて自宅へ戻しますか？"))
+      return;
+    const r = endEvent();
+    showToast(r.ok ? "会場の在庫を自宅へ戻しました" : r.message ?? "エラー");
+  }
+
   return (
     <>
       <PageHeader eyebrow="SELL" title="売る" />
@@ -127,13 +135,21 @@ export default function SellPage() {
                   イベント会場の在庫から販売します。
                 </p>
               </div>
-              <button
-                onClick={() => setAddOpen(true)}
-                className="inline-flex h-10 items-center gap-2 rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
-              >
-                <PlusIcon className="h-4 w-4" />
-                商品を追加
-              </button>
+              <div className="flex flex-wrap gap-2">
+                <button
+                  onClick={() => setAddOpen(true)}
+                  className="inline-flex h-10 items-center gap-2 rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  商品を追加
+                </button>
+                <button
+                  onClick={handleEndEvent}
+                  className="inline-flex h-10 items-center rounded-full border border-[#b9b9ca] bg-white px-4 text-sm font-medium"
+                >
+                  イベント終了
+                </button>
+              </div>
             </div>
 
             <div className="mb-4 flex h-11 items-center gap-2 rounded-lg border border-[#c7c7de] bg-white px-3">
