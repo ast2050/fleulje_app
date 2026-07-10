@@ -2,7 +2,16 @@
 // SSR（サーバー側）では window が無いので安全に空データを返す。
 // キーは元アプリと同一: products / locations / salesHistory
 
-import type { Location, Product, Recipe, Sale, WaxMaster } from "@/types";
+import type {
+  Experiment,
+  ExperimentHistory,
+  LabSettings,
+  Location,
+  Product,
+  Recipe,
+  Sale,
+  WaxMaster,
+} from "@/types";
 
 export const STORAGE_KEYS = {
   products: "products",
@@ -10,7 +19,13 @@ export const STORAGE_KEYS = {
   salesHistory: "salesHistory",
   recipes: "cl_masters",
   waxMasters: "cl_wax_masters",
+  experiments: "cl_experiments",
+  expHistory: "cl_history",
+  labSettings: "cl_settings",
 } as const;
+
+/** 実験ラボ設定の既定値 */
+export const DEFAULT_LAB_SETTINGS: LabSettings = { maxDurationHours: 5 };
 
 /** 汎用の読み込み（失敗時は fallback を返す） */
 function read<T>(key: string, fallback: T): T {
@@ -113,7 +128,36 @@ export function saveWaxMasters(waxMasters: WaxMaster[]): void {
   write(STORAGE_KEYS.waxMasters, waxMasters);
 }
 
+// --- 実験ラボ（実験・履歴・設定） ---
+export function loadExperiments(): Experiment[] {
+  return read<Experiment[]>(STORAGE_KEYS.experiments, []);
+}
+export function saveExperiments(experiments: Experiment[]): void {
+  write(STORAGE_KEYS.experiments, experiments);
+}
+export function loadExpHistory(): ExperimentHistory[] {
+  return read<ExperimentHistory[]>(STORAGE_KEYS.expHistory, []);
+}
+export function saveExpHistory(history: ExperimentHistory[]): void {
+  write(STORAGE_KEYS.expHistory, history);
+}
+export function loadLabSettings(): LabSettings {
+  const s = read<Partial<LabSettings>>(
+    STORAGE_KEYS.labSettings,
+    DEFAULT_LAB_SETTINGS,
+  );
+  return { maxDurationHours: s.maxDurationHours ?? 5 };
+}
+export function saveLabSettings(settings: LabSettings): void {
+  write(STORAGE_KEYS.labSettings, settings);
+}
+
 /** 新しいIDを採番（元アプリと同じく時刻ベース） */
 export function createId(): number {
   return Date.now();
+}
+
+/** 実験用の文字列ID（同一ミリ秒の衝突を避ける） */
+export function newExpId(): string {
+  return `${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }

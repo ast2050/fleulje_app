@@ -9,6 +9,7 @@ import {
   useCallback,
   useContext,
   useEffect,
+  useRef,
   useState,
   type ReactNode,
 } from "react";
@@ -16,8 +17,11 @@ import type {
   AgeBand,
   CartItem,
   Category,
+  Experiment,
+  ExperimentHistory,
   Gender,
   Inventory,
+  LabSettings,
   Location,
   Product,
   Recipe,
@@ -27,11 +31,18 @@ import type {
 import {
   STORAGE_KEYS,
   createId,
+  loadExpHistory,
+  loadExperiments,
+  loadLabSettings,
   loadLocations,
   loadProducts,
   loadRecipes,
   loadSales,
   loadWaxMasters,
+  newExpId,
+  saveExpHistory,
+  saveExperiments,
+  saveLabSettings,
   saveLocations,
   saveProducts,
   saveRecipes,
@@ -190,6 +201,34 @@ interface StoreValue {
   addWax: (name: string) => ActionResult;
   /** ワックス素材を削除する（登録済みレシピには影響しない） */
   deleteWax: (waxId: number) => void;
+
+  // --- 実験ラボ ---
+  experiments: Experiment[];
+  expHistory: ExperimentHistory[];
+  labSettings: LabSettings;
+  /** 自動一時停止が起きたときの通知メッセージ（トースト用。UIが表示後に clear する） */
+  autoStopNotice: string | null;
+  clearAutoStopNotice: () => void;
+  /** レシピを選んで実験を開始する（計測中の状態で追加。最大10件） */
+  startExperiment: (recipe: Recipe) => ActionResult;
+  /** タイマーの開始/一時停止を切り替える */
+  toggleTimer: (expId: string) => void;
+  /** 実験を削除する（履歴に残さない） */
+  deleteExperiment: (expId: string) => void;
+  /** ラップを記録する（elapsed は記録時点の経過ミリ秒） */
+  addLap: (expId: string, elapsed: number, memo: string) => void;
+  /** ラップのメモを編集する */
+  updateLap: (expId: string, index: number, memo: string) => void;
+  /** ラップを削除する */
+  deleteLap: (expId: string, index: number) => void;
+  /** 観察フリーメモを追加する */
+  addExpMemo: (expId: string, elapsed: number, text: string) => void;
+  /** 実験を完了して履歴へ保存する */
+  completeExperiment: (expId: string) => void;
+  /** 止め忘れ：指定時刻で一時停止にする */
+  stopExperimentAt: (expId: string, stopTs: number) => void;
+  /** 最大連続計測時間（時間）を設定する（0=無制限） */
+  setMaxDurationHours: (hours: number) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -201,6 +240,12 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [sales, setSales] = useState<Sale[]>([]);
   const [recipes, setRecipes] = useState<Recipe[]>([]);
   const [waxMasters, setWaxMasters] = useState<WaxMaster[]>([]);
+  const [experiments, setExperiments] = useState<Experiment[]>([]);
+  const [expHistory, setExpHistory] = useState<ExperimentHistory[]>([]);
+  const [labSettings, setLabSettings] = useState<LabSettings>({
+    maxDurationHours: 5,
+  });
+  const [autoStopNotice, setAutoStopNotice] = useState<string | null>(null);
 
   // 初回マウント時に localStorage から読み込む（未初期化ならサンプルを投入）
   useEffect(() => {
@@ -215,8 +260,48 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setSales(loadSales());
     setRecipes(loadRecipes());
     setWaxMasters(loadWaxMasters());
+    setExperiments(loadExperiments());
+    setExpHistory(loadExpHistory());
+    setLabSettings(loadLabSettings());
     setReady(true);
   }, []);
+
+  // 最新値を interval から参照するための ref
+  const experimentsRef = useRef(experiments);
+  experimentsRef.current = experiments;
+  const maxHoursRef = useRef(labSettings.maxDurationHours);
+  maxHoursRef.current = labSettings.maxDurationHours;
+
+  // 1秒ごとに最大連続計測時間を超えた計測を自動一時停止する
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const maxMs = (maxHoursRef.current || 0) * 3600000;
+      if (maxMs <= 0) return;
+      const now = Date.now();
+      const toPause = experimentsRef.current.filter(
+        (e) => e.startedAt && now - e.startedAt >= maxMs,
+      );
+      if (toPause.length === 0) return;
+      const ids = new Set(toPause.map((e) => e.id));
+      const next = experimentsRef.current.map((e) =>
+        ids.has(e.id) && e.startedAt
+          ? {
+              ...e,
+              accumulatedMs: e.accumulatedMs + (now - e.startedAt),
+              startedAt: null,
+            }
+          : e,
+      );
+      setExperiments(next);
+      saveExperiments(next);
+      setAutoStopNotice(
+        `${toPause.map((e) => e.masterName).join("、")} が最大時間に達したため自動停止しました`,
+      );
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const clearAutoStopNotice = useCallback(() => setAutoStopNotice(null), []);
 
   const checkoutEventSale = useCallback(
     (cart: CartItem[], gender: Gender, age: AgeBand) => {
@@ -493,6 +578,180 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     });
   }, []);
 
+  // --- 実験ラボ ---
+  const startExperiment = useCallback(
+    (recipe: Recipe): ActionResult => {
+      if (experiments.length >= 10)
+        return { ok: false, message: "同時計測は最大10件までです" };
+      const now = Date.now();
+      const exp: Experiment = {
+        id: newExpId(),
+        masterId: recipe.id,
+        masterName: recipe.name,
+        masterSnapshot: recipe,
+        accumulatedMs: 0,
+        startedAt: now, // 計測中の状態で開始
+        laps: [],
+        memos: [],
+        createdAt: now,
+      };
+      const next = [...experiments, exp];
+      setExperiments(next);
+      saveExperiments(next);
+      return { ok: true };
+    },
+    [experiments],
+  );
+
+  const toggleTimer = useCallback((expId: string) => {
+    setExperiments((prev) => {
+      const now = Date.now();
+      const next = prev.map((e) => {
+        if (e.id !== expId) return e;
+        if (e.startedAt) {
+          return {
+            ...e,
+            accumulatedMs: e.accumulatedMs + (now - e.startedAt),
+            startedAt: null,
+          };
+        }
+        return { ...e, startedAt: now };
+      });
+      saveExperiments(next);
+      return next;
+    });
+  }, []);
+
+  const deleteExperiment = useCallback((expId: string) => {
+    setExperiments((prev) => {
+      const next = prev.filter((e) => e.id !== expId);
+      saveExperiments(next);
+      return next;
+    });
+  }, []);
+
+  const addLap = useCallback(
+    (expId: string, elapsed: number, memo: string) => {
+      setExperiments((prev) => {
+        const next = prev.map((e) =>
+          e.id === expId
+            ? {
+                ...e,
+                laps: [...e.laps, { elapsed, memo, recordedAt: Date.now() }],
+              }
+            : e,
+        );
+        saveExperiments(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const updateLap = useCallback((expId: string, index: number, memo: string) => {
+    setExperiments((prev) => {
+      const next = prev.map((e) =>
+        e.id === expId
+          ? {
+              ...e,
+              laps: e.laps.map((l, i) => (i === index ? { ...l, memo } : l)),
+            }
+          : e,
+      );
+      saveExperiments(next);
+      return next;
+    });
+  }, []);
+
+  const deleteLap = useCallback((expId: string, index: number) => {
+    setExperiments((prev) => {
+      const next = prev.map((e) =>
+        e.id === expId
+          ? { ...e, laps: e.laps.filter((_, i) => i !== index) }
+          : e,
+      );
+      saveExperiments(next);
+      return next;
+    });
+  }, []);
+
+  const addExpMemo = useCallback(
+    (expId: string, elapsed: number, text: string) => {
+      setExperiments((prev) => {
+        const next = prev.map((e) =>
+          e.id === expId
+            ? {
+                ...e,
+                memos: [
+                  ...e.memos,
+                  { text, elapsed, recordedAt: Date.now() },
+                ],
+              }
+            : e,
+        );
+        saveExperiments(next);
+        return next;
+      });
+    },
+    [],
+  );
+
+  const completeExperiment = useCallback(
+    (expId: string) => {
+      const exp = experiments.find((e) => e.id === expId);
+      if (!exp) return;
+      const now = Date.now();
+      const finalMs =
+        exp.accumulatedMs + (exp.startedAt ? now - exp.startedAt : 0);
+      const record: ExperimentHistory = {
+        id: newExpId(),
+        expId: exp.id,
+        masterId: exp.masterId,
+        masterName: exp.masterName,
+        masterSnapshot: exp.masterSnapshot,
+        accumulatedMs: finalMs,
+        laps: exp.laps,
+        memos: exp.memos,
+        createdAt: exp.createdAt,
+        finishedAt: now,
+      };
+      setExpHistory((prev) => {
+        const next = [...prev, record];
+        saveExpHistory(next);
+        return next;
+      });
+      setExperiments((prev) => {
+        const next = prev.filter((e) => e.id !== expId);
+        saveExperiments(next);
+        return next;
+      });
+    },
+    [experiments],
+  );
+
+  const stopExperimentAt = useCallback((expId: string, stopTs: number) => {
+    setExperiments((prev) => {
+      const next = prev.map((e) => {
+        if (e.id !== expId || !e.startedAt) return e;
+        const added = Math.max(0, stopTs - e.startedAt);
+        return {
+          ...e,
+          accumulatedMs: e.accumulatedMs + added,
+          startedAt: null,
+        };
+      });
+      saveExperiments(next);
+      return next;
+    });
+  }, []);
+
+  const setMaxDurationHours = useCallback((hours: number) => {
+    const value = Number.isFinite(hours) && hours > 0 ? hours : 0;
+    const next: LabSettings = { maxDurationHours: value };
+    setLabSettings(next);
+    saveLabSettings(next);
+  }, []);
+
   return (
     <StoreContext.Provider
       value={{
@@ -517,6 +776,21 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         deleteRecipe,
         addWax,
         deleteWax,
+        experiments,
+        expHistory,
+        labSettings,
+        autoStopNotice,
+        clearAutoStopNotice,
+        startExperiment,
+        toggleTimer,
+        deleteExperiment,
+        addLap,
+        updateLap,
+        deleteLap,
+        addExpMemo,
+        completeExperiment,
+        stopExperimentAt,
+        setMaxDurationHours,
       }}
     >
       {children}

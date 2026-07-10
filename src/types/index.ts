@@ -136,3 +136,52 @@ export interface WaxMaster {
   id: number;
   name: string;
 }
+
+// --- 実験ラボ（元アプリ candle_lab に準拠） ---
+// localStorage キー: cl_experiments（進行中）/ cl_history（完了履歴）/ cl_settings（設定）
+
+/** ラップ（時点スナップショット） */
+export interface Lap {
+  elapsed: number; // 経過ミリ秒
+  memo: string;
+  recordedAt: number;
+}
+
+/** 観察フリーメモ */
+export interface ExpMemo {
+  text: string;
+  elapsed: number;
+  recordedAt: number;
+}
+
+/** 進行中の実験 */
+export interface Experiment {
+  id: string;
+  masterId: number; // レシピID
+  masterName: string; // レシピ名（開始時のコピー）
+  masterSnapshot: Recipe; // 開始時点のレシピ内容
+  accumulatedMs: number; // 一時停止までに貯めた累計ミリ秒
+  startedAt: number | null; // 計測中なら開始時刻(ms)、一時停止中は null
+  laps: Lap[];
+  memos: ExpMemo[];
+  createdAt: number;
+}
+
+/** 完了した実験（履歴） */
+export interface ExperimentHistory {
+  id: string;
+  expId: string;
+  masterId: number;
+  masterName: string;
+  masterSnapshot: Recipe;
+  accumulatedMs: number; // 最終累計ミリ秒
+  laps: Lap[];
+  memos: ExpMemo[];
+  createdAt: number;
+  finishedAt: number;
+}
+
+/** 実験ラボの設定 */
+export interface LabSettings {
+  maxDurationHours: number; // 最大連続計測時間（0=無制限）
+}
