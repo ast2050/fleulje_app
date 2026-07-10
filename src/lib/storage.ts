@@ -2,12 +2,14 @@
 // SSR（サーバー側）では window が無いので安全に空データを返す。
 // キーは元アプリと同一: products / locations / salesHistory
 
-import type { Location, Product, Sale } from "@/types";
+import type { Location, Product, Recipe, Sale, WaxMaster } from "@/types";
 
 export const STORAGE_KEYS = {
   products: "products",
   locations: "locations",
   salesHistory: "salesHistory",
+  recipes: "cl_masters",
+  waxMasters: "cl_wax_masters",
 } as const;
 
 /** 汎用の読み込み（失敗時は fallback を返す） */
@@ -72,6 +74,43 @@ export function loadSales(): Sale[] {
 }
 export function saveSales(sales: Sale[]): void {
   write(STORAGE_KEYS.salesHistory, sales);
+}
+
+// --- レシピ ---
+/**
+ * 古い/不完全なレシピを補正する（元アプリ candle_lab の後方互換）。
+ * 旧データの waxType(string) を waxBlend 配列に変換し、必須項目を補う。
+ */
+function migrateRecipe(r: Recipe & { waxType?: string }): Recipe {
+  let waxBlend = Array.isArray(r.waxBlend) ? r.waxBlend : [];
+  if (waxBlend.length === 0 && r.waxType) {
+    waxBlend = [{ name: r.waxType, grams: 0 }];
+  }
+  return {
+    id: r.id,
+    name: r.name ?? "",
+    waxBlend,
+    fragrancePercent: r.fragrancePercent,
+    size: r.size ?? "その他",
+    wickSize: r.wickSize,
+    memo: r.memo,
+  };
+}
+export function loadRecipes(): Recipe[] {
+  return read<(Recipe & { waxType?: string })[]>(STORAGE_KEYS.recipes, []).map(
+    migrateRecipe,
+  );
+}
+export function saveRecipes(recipes: Recipe[]): void {
+  write(STORAGE_KEYS.recipes, recipes);
+}
+
+// --- ワックス素材マスタ ---
+export function loadWaxMasters(): WaxMaster[] {
+  return read<WaxMaster[]>(STORAGE_KEYS.waxMasters, []);
+}
+export function saveWaxMasters(waxMasters: WaxMaster[]): void {
+  write(STORAGE_KEYS.waxMasters, waxMasters);
 }
 
 /** 新しいIDを採番（元アプリと同じく時刻ベース） */

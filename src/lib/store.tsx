@@ -20,17 +20,23 @@ import type {
   Inventory,
   Location,
   Product,
+  Recipe,
   Sale,
+  WaxMaster,
 } from "@/types";
 import {
   STORAGE_KEYS,
   createId,
   loadLocations,
   loadProducts,
+  loadRecipes,
   loadSales,
+  loadWaxMasters,
   saveLocations,
   saveProducts,
+  saveRecipes,
   saveSales,
+  saveWaxMasters,
 } from "@/lib/storage";
 import { cartTotal } from "@/lib/money";
 
@@ -132,6 +138,9 @@ export interface ProductEdit {
   active: boolean;
 }
 
+/** レシピ登録・編集モーダルからの入力（id は含まない） */
+export type RecipeInput = Omit<Recipe, "id">;
+
 interface StoreValue {
   /** localStorage の読み込みが完了したか（描画のちらつき防止に使う） */
   ready: boolean;
@@ -167,6 +176,20 @@ interface StoreValue {
   ) => ActionResult;
   /** イベント終了（イベント在庫をすべて自宅へ戻す） */
   endEvent: () => ActionResult;
+
+  // --- レシピ / ワックス素材 ---
+  recipes: Recipe[];
+  waxMasters: WaxMaster[];
+  /** レシピを登録する */
+  addRecipe: (input: RecipeInput) => void;
+  /** レシピを編集する */
+  updateRecipe: (recipeId: number, input: RecipeInput) => void;
+  /** レシピを削除する */
+  deleteRecipe: (recipeId: number) => void;
+  /** ワックス素材を追加する（同名は不可） */
+  addWax: (name: string) => ActionResult;
+  /** ワックス素材を削除する（登録済みレシピには影響しない） */
+  deleteWax: (waxId: number) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -176,6 +199,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   const [products, setProducts] = useState<Product[]>([]);
   const [locations, setLocations] = useState<Location[]>([]);
   const [sales, setSales] = useState<Sale[]>([]);
+  const [recipes, setRecipes] = useState<Recipe[]>([]);
+  const [waxMasters, setWaxMasters] = useState<WaxMaster[]>([]);
 
   // 初回マウント時に localStorage から読み込む（未初期化ならサンプルを投入）
   useEffect(() => {
@@ -188,6 +213,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     setProducts(loadProducts());
     setLocations(loadLocations());
     setSales(loadSales());
+    setRecipes(loadRecipes());
+    setWaxMasters(loadWaxMasters());
     setReady(true);
   }, []);
 
@@ -415,6 +442,57 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     return { ok: true };
   }, [products]);
 
+  // --- レシピ ---
+  const addRecipe = useCallback((input: RecipeInput) => {
+    setRecipes((prev) => {
+      const next = [...prev, { ...input, id: createId() }];
+      saveRecipes(next);
+      return next;
+    });
+  }, []);
+
+  const updateRecipe = useCallback((recipeId: number, input: RecipeInput) => {
+    setRecipes((prev) => {
+      const next = prev.map((r) =>
+        r.id === recipeId ? { ...input, id: recipeId } : r,
+      );
+      saveRecipes(next);
+      return next;
+    });
+  }, []);
+
+  const deleteRecipe = useCallback((recipeId: number) => {
+    setRecipes((prev) => {
+      const next = prev.filter((r) => r.id !== recipeId);
+      saveRecipes(next);
+      return next;
+    });
+  }, []);
+
+  // --- ワックス素材 ---
+  const addWax = useCallback(
+    (name: string): ActionResult => {
+      const trimmed = name.trim();
+      if (!trimmed)
+        return { ok: false, message: "ワックス名を入力してください" };
+      if (waxMasters.some((w) => w.name === trimmed))
+        return { ok: false, message: "同じ名前のワックスが既にあります" };
+      const next = [...waxMasters, { id: createId(), name: trimmed }];
+      setWaxMasters(next);
+      saveWaxMasters(next);
+      return { ok: true };
+    },
+    [waxMasters],
+  );
+
+  const deleteWax = useCallback((waxId: number) => {
+    setWaxMasters((prev) => {
+      const next = prev.filter((w) => w.id !== waxId);
+      saveWaxMasters(next);
+      return next;
+    });
+  }, []);
+
   return (
     <StoreContext.Provider
       value={{
@@ -432,6 +510,13 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         addProduction,
         moveInventory,
         endEvent,
+        recipes,
+        waxMasters,
+        addRecipe,
+        updateRecipe,
+        deleteRecipe,
+        addWax,
+        deleteWax,
       }}
     >
       {children}

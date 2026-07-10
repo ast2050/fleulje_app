@@ -104,3 +104,35 @@ export interface BackupData {
   locations: Location[];
   salesHistory: Sale[];
 }
+
+// --- レシピ / ワックス素材（元アプリ candle_lab に準拠） ---
+// localStorage キー: cl_masters（レシピ）/ cl_wax_masters（ワックス素材）
+
+/** レシピの大きさ */
+export type RecipeSize = "大" | "小" | "その他";
+
+/** 大きさの選択肢 */
+export const RECIPE_SIZES: RecipeSize[] = ["大", "小", "その他"];
+
+/** 配合ワックスの1行（ワックス名＋グラム） */
+export interface WaxBlendItem {
+  name: string;
+  grams: number;
+}
+
+/** レシピ（キャンドルの作り方） */
+export interface Recipe {
+  id: number;
+  name: string; // 作品名（必須）
+  waxBlend: WaxBlendItem[]; // 配合ワックス（複数）
+  fragrancePercent?: number; // 香料濃度(%)
+  size: RecipeSize;
+  wickSize?: string; // 芯サイズ（例: CD-10）
+  memo?: string;
+}
+
+/** ワックス素材マスタ */
+export interface WaxMaster {
+  id: number;
+  name: string;
+}
