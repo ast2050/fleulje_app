@@ -1,5 +1,5 @@
-import { BagIcon, PlusIcon, SearchIcon } from "../_components/icons";
-import { PageHeader } from "../_components/page-header";
+import { BagIcon, PlusIcon, SearchIcon } from "@/components/icons";
+import { PageHeader } from "@/components/page-header";
 
 const products = [
   { name: "Amber mist", price: "¥2,200", stock: "残り 8", tone: "bg-[#f5c2e7]" },

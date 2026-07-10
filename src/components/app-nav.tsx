@@ -5,10 +5,10 @@ import { usePathname } from "next/navigation";
 import { BagIcon, ClockIcon, FlaskIcon, GridIcon, SettingsIcon } from "./icons";
 
 const items = [
-  { href: "/mockup", label: "ホーム", icon: GridIcon },
-  { href: "/mockup/create", label: "つくる", icon: FlaskIcon },
-  { href: "/mockup/sell", label: "売る", icon: BagIcon },
-  { href: "/mockup/history", label: "履歴", icon: ClockIcon },
+  { href: "/", label: "ホーム", icon: GridIcon },
+  { href: "/create", label: "つくる", icon: FlaskIcon },
+  { href: "/sell", label: "売る", icon: BagIcon },
+  { href: "/history", label: "履歴", icon: ClockIcon },
 ];
 
 export function AppNav() {
@@ -17,7 +17,7 @@ export function AppNav() {
   return (
     <>
       <aside className="fixed inset-y-0 left-0 z-20 hidden w-60 flex-col border-r border-[#dedee8] bg-white px-4 py-5 lg:flex">
-        <Link href="/mockup" className="mb-11 flex items-center gap-2 px-2 text-[19px] font-medium tracking-[-0.05em] text-[#050038]">
+        <Link href="/" className="mb-11 flex items-center gap-2 px-2 text-[19px] font-medium tracking-[-0.05em] text-[#050038]">
           <span className="grid h-8 w-8 place-items-center rounded-[9px] bg-[#ffd02f] text-sm font-bold">f</span>
           fleulje
         </Link>
@@ -28,7 +28,7 @@ export function AppNav() {
           })}
         </nav>
         <div className="mt-auto border-t border-[#e6e6ed] pt-4">
-          <Link href="/mockup/settings" className={`flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium ${pathname === "/mockup/settings" ? "bg-[#050038] text-white" : "text-[#52526a] hover:bg-[#f4f4f8]"}`}><SettingsIcon className="h-5 w-5"/>管理</Link>
+          <Link href="/settings" className={`flex h-11 items-center gap-3 rounded-full px-4 text-sm font-medium ${pathname === "/settings" ? "bg-[#050038] text-white" : "text-[#52526a] hover:bg-[#f4f4f8]"}`}><SettingsIcon className="h-5 w-5"/>管理</Link>
           <div className="mt-5 flex items-center gap-3 px-3 text-sm text-[#52526a]"><span className="grid h-8 w-8 place-items-center rounded-full bg-[#f5c2e7] font-medium text-[#050038]">Y</span><span>Yui&apos;s studio</span></div>
         </div>
       </aside>

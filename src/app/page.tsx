@@ -1,65 +1,21 @@
-import Image from "next/image";
+import Link from "next/link";
+import { ArrowIcon, BagIcon, ClockIcon, FlaskIcon, PlusIcon, SparkIcon } from "@/components/icons";
+import { PageHeader } from "@/components/page-header";
 
-export default function Home() {
-  return (
-    <div className="flex flex-col flex-1 items-center justify-center bg-zinc-50 font-sans dark:bg-black">
-      <main className="flex flex-1 w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the page.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs?utm_source=create-next-app&utm_medium=appdir-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
-        </div>
-      </main>
-    </div>
-  );
+const activity = [
+  { time: "10:24", title: "Pillar 01 の観察を記録", note: "プール径 52mm ・ 炎は安定", tone: "bg-[#bceee9]", icon: FlaskIcon },
+  { time: "09:10", title: "Summer Market の在庫を更新", note: "3商品が残りわずかです", tone: "bg-[#ffdcdc]", icon: BagIcon },
+  { time: "昨日", title: "Amber mist を 4点販売", note: "売上 ¥8,800", tone: "bg-[#fff0b3]", icon: ClockIcon },
+];
+
+export default function MockupHomePage() {
+  return <>
+    <PageHeader eyebrow="FRIDAY, JULY 10" title="おはよう、Yui さん" />
+    <section className="mb-7 grid gap-4 md:mb-9 md:grid-cols-[1.55fr_1fr]">
+      <div className="relative overflow-hidden rounded-[28px] bg-[#050038] p-6 text-white shadow-[0_12px_32px_-4px_rgba(5,0,56,0.2)] sm:p-8"><div className="relative z-10"><span className="inline-flex rounded-full bg-[#ffd02f] px-3 py-1 text-xs font-semibold text-[#050038]">進行中の実験</span><p className="mt-7 text-sm text-white/70">Jasmine pillar · Test 03</p><p className="mt-2 text-5xl font-medium tracking-[-0.07em] sm:text-6xl">02:34:18</p><p className="mt-2 text-sm text-white/65">開始から2時間34分 · 次の観察は 11:00</p><div className="mt-7 flex flex-wrap gap-2"><Link href="/create" className="inline-flex h-11 items-center gap-2 rounded-full bg-white px-5 text-sm font-medium text-[#050038]"><PlusIcon className="h-4 w-4"/>観察を記録</Link><Link href="/create" className="inline-flex h-11 items-center rounded-full border border-white/30 px-5 text-sm font-medium text-white">実験を開く</Link></div></div><div className="absolute -right-10 -top-12 h-48 w-48 rounded-full bg-[#4262ff] opacity-90"/><div className="absolute bottom-[-90px] right-10 h-40 w-40 rounded-full border-[22px] border-[#f5c2e7] opacity-90"/></div>
+      <div className="rounded-[28px] bg-[#bceee9] p-6 text-[#050038] sm:p-8"><div className="flex items-start justify-between"><span className="inline-flex rounded-full bg-white/80 px-3 py-1 text-xs font-semibold">在庫の確認</span><SparkIcon className="h-6 w-6"/></div><p className="mt-10 text-4xl font-medium tracking-[-0.06em]">3<span className="ml-1 text-lg">items</span></p><p className="mt-2 text-sm leading-6 text-[#303057]">次回イベントまでに補充が必要な商品があります。</p><Link href="/sell" className="mt-6 inline-flex items-center gap-1 text-sm font-medium underline underline-offset-4">在庫を確認 <ArrowIcon className="h-4 w-4"/></Link></div>
+    </section>
+    <section className="mb-9"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-medium tracking-[-0.04em]">今日のワークスペース</h2><span className="text-xs text-[#77778d]">7月10日（金）</span></div><div className="grid gap-3 sm:grid-cols-3"><Link href="/create" className="group rounded-[24px] border border-[#dedee8] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(5,0,56,0.06)]"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#f5c2e7]"><FlaskIcon className="h-5 w-5"/></span><p className="mt-8 text-base font-medium">新しい実験を始める</p><p className="mt-1 text-sm text-[#77778d]">レシピからすぐに開始</p></Link><Link href="/sell" className="group rounded-[24px] border border-[#dedee8] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(5,0,56,0.06)]"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#fff0b3]"><BagIcon className="h-5 w-5"/></span><p className="mt-8 text-base font-medium">イベント販売を開く</p><p className="mt-1 text-sm text-[#77778d]">会計・在庫をひとつの画面で</p></Link><Link href="/history" className="group rounded-[24px] border border-[#dedee8] bg-white p-5 transition hover:-translate-y-0.5 hover:shadow-[0_4px_12px_rgba(5,0,56,0.06)]"><span className="grid h-10 w-10 place-items-center rounded-full bg-[#d8d3ff]"><ClockIcon className="h-5 w-5"/></span><p className="mt-8 text-base font-medium">今週の記録を見る</p><p className="mt-1 text-sm text-[#77778d]">制作と販売の流れを振り返る</p></Link></div></section>
+    <section className="max-w-3xl"><div className="mb-4 flex items-center justify-between"><h2 className="text-xl font-medium tracking-[-0.04em]">最近の動き</h2><Link href="/history" className="text-sm font-medium text-[#4262ff]">すべて見る</Link></div><div className="overflow-hidden rounded-[20px] border border-[#dedee8] bg-white">{activity.map(({ time, title, note, tone, icon: Icon }) => <div key={title} className="flex items-center gap-4 border-b border-[#ececf1] px-4 py-4 last:border-0 sm:px-5"><span className={`grid h-10 w-10 shrink-0 place-items-center rounded-full ${tone}`}><Icon className="h-5 w-5"/></span><div className="min-w-0 flex-1"><p className="truncate text-sm font-medium">{title}</p><p className="mt-0.5 truncate text-xs text-[#77778d]">{note}</p></div><time className="text-xs text-[#77778d]">{time}</time></div>)}</div></section>
+  </>;
 }

@@ -1,5 +1,5 @@
-import { ArrowIcon, BagIcon, FlaskIcon, SettingsIcon } from "../_components/icons";
-import { PageHeader } from "../_components/page-header";
+import { ArrowIcon, BagIcon, FlaskIcon, SettingsIcon } from "@/components/icons";
+import { PageHeader } from "@/components/page-header";
 
 const sections = [
   { title: "商品と在庫", text: "商品、在庫アラート、販売場所を管理します。", icon: BagIcon, tone: "bg-[#fff0b3]" },

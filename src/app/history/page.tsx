@@ -1,5 +1,5 @@
-import { BagIcon, FlaskIcon, SearchIcon } from "../_components/icons";
-import { PageHeader } from "../_components/page-header";
+import { BagIcon, FlaskIcon, SearchIcon } from "@/components/icons";
+import { PageHeader } from "@/components/page-header";
 
 const records = [
   { date: "今日", time: "10:24", title: "Jasmine pillar の観察", text: "プール径 52mm · 炎は安定", icon: FlaskIcon, tone: "bg-[#f5c2e7]" },
