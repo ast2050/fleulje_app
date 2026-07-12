@@ -1,5 +1,4 @@
 @import "tailwindcss";
-@source "../../mockup";
 
 :root {
   --background: #ffffff;
