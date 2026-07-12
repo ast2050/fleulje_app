@@ -49,3 +49,15 @@ export function MoreIcon(props: IconProps) {
 export function SparkIcon(props: IconProps) {
   return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="m12 3 1.7 5.3L19 10l-5.3 1.7L12 17l-1.7-5.3L5 10l5.3-1.7L12 3Z"/><path d="m19 16 .7 2.3L22 19l-2.3.7L19 22l-.7-2.3L16 19l2.3-.7L19 16Z"/></svg>;
 }
+
+export function CloudIcon(props: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M7 18a4 4 0 0 1-.5-7.97 5.5 5.5 0 0 1 10.66-1.3A3.75 3.75 0 0 1 17.5 18H7Z"/></svg>;
+}
+
+export function SpinnerIcon(props: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" {...props}><path d="M12 3.5a8.5 8.5 0 1 0 8.5 8.5" opacity="0.9"/></svg>;
+}
+
+export function CheckIcon(props: IconProps) {
+  return <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" {...props}><path d="M5 12.5l4.5 4.5L19 7"/></svg>;
+}
