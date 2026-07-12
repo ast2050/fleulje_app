@@ -95,6 +95,26 @@ async function post(
 
 // --- 各データの整形（ヘッダー順に固定長の行を作る） ---
 
+/**
+ * ISO文字列(UTC)を日本時間の "YYYY-MM-DD HH:MM:SS" に整形する。
+ * アプリ内部の日時はUTCで保存しているため、スプレッドシートへ書き出す
+ * 直前にここで日本時間へ変換する（保存データ自体は変更しない）。
+ * sv-SEロケールは "2026-07-12 14:30:00" 形式を返し、Sheetsが日時として解釈できる。
+ * 引数はISO文字列（販売履歴）とエポックミリ秒（実験履歴）の両方を受け付ける。
+ */
+function toJst(value: string | number): string {
+  return new Intl.DateTimeFormat("sv-SE", {
+    timeZone: "Asia/Tokyo",
+    year: "numeric",
+    month: "2-digit",
+    day: "2-digit",
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+    hour12: false,
+  }).format(new Date(value));
+}
+
 /** 販売場所を読みやすい表記にする */
 function saleLocationLabel(sale: Sale): string {
   if (sale.locationName) return sale.locationName;
@@ -128,7 +148,7 @@ export async function syncSales(sales: Sale[]): Promise<SyncResult> {
     for (const item of sale.items) {
       rows.push([
         sale.id,
-        sale.timestamp,
+        toJst(sale.timestamp),
         item.name,
         item.price,
         item.quantity,
@@ -163,8 +183,8 @@ export async function syncExpHistory(
     Math.round(h.accumulatedMs / 60000),
     h.laps.length,
     h.memos.length,
-    new Date(h.createdAt).toISOString(),
-    new Date(h.finishedAt).toISOString(),
+    toJst(h.createdAt),
+    toJst(h.finishedAt),
   ]);
   return post({ mode: "append", sheet: "実験履歴", key: "実験ID", header, rows });
 }
@@ -243,7 +263,7 @@ export async function syncBackup(): Promise<SyncResult> {
   }
   const header = ["日時", "データ(JSON)"];
   const rows: CellValue[][] = [
-    [new Date().toISOString(), JSON.stringify(all)],
+    [toJst(new Date().toISOString()), JSON.stringify(all)],
   ];
   return post({ mode: "backup", sheet: "バックアップ", header, rows });
 }
