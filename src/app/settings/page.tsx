@@ -5,7 +5,7 @@ import { PageHeader } from "@/components/page-header";
 const sections = [
   { title: "商品と在庫", text: "商品、在庫アラート、販売場所を管理します。", icon: BagIcon, tone: "bg-[#fff0b3]", href: "/settings/inventory" },
   { title: "レシピと素材", text: "レシピ、ワックス、芯のマスタを管理します。", icon: FlaskIcon, tone: "bg-[#f5c2e7]", href: "/settings/recipes" },
-  { title: "アプリの設定", text: "バックアップ、データの復元、実験の既定値。", icon: SettingsIcon, tone: "bg-[#bceee9]" },
+  { title: "アプリの設定", text: "スプレッドシート連携、バックアップ、実験の既定値。", icon: SettingsIcon, tone: "bg-[#bceee9]", href: "/settings/app" },
 ];
 
 export default function SettingsPage() {

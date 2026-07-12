@@ -87,6 +87,7 @@ export const AGE_BANDS: Exclude<AgeBand, "-">[] = [
 
 /** 販売記録（salesHistory の1件） */
 export interface Sale {
+  id: string; // 一意ID（スプレッドシート差分同期の重複判定に使う）
   timestamp: string; // ISO 文字列
   items: SaleItem[];
   gender: Gender;

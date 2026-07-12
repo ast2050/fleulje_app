@@ -40,6 +40,7 @@ import {
   loadSales,
   loadWaxMasters,
   newExpId,
+  newSaleId,
   saveExpHistory,
   saveExperiments,
   saveLabSettings,
@@ -332,6 +333,7 @@ export function StoreProvider({ children }: { children: ReactNode }) {
 
       // 販売履歴に記録
       const sale: Sale = {
+        id: newSaleId(),
         timestamp: new Date().toISOString(),
         items: cart.map((c) => ({
           productId: c.productId,

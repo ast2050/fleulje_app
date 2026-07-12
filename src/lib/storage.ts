@@ -84,11 +84,25 @@ export function saveLocations(locations: Location[]): void {
 }
 
 // --- 販売履歴 ---
+/**
+ * 古い販売記録に id を補う（差分同期の重複判定に使う）。
+ * timestamp と配列内の位置から安定した id を作るので、
+ * 再読み込みしても同じレコードには常に同じ id が付く。
+ */
+function migrateSale(s: Sale, index: number): Sale {
+  if (s.id) return s;
+  return { ...s, id: `legacy_${s.timestamp}_${index}` };
+}
 export function loadSales(): Sale[] {
-  return read<Sale[]>(STORAGE_KEYS.salesHistory, []);
+  return read<Sale[]>(STORAGE_KEYS.salesHistory, []).map(migrateSale);
 }
 export function saveSales(sales: Sale[]): void {
   write(STORAGE_KEYS.salesHistory, sales);
+}
+
+/** 販売記録用の一意ID（同一ミリ秒の衝突を避ける） */
+export function newSaleId(): string {
+  return `sale_${Date.now()}_${Math.floor(Math.random() * 100000)}`;
 }
 
 // --- レシピ ---
