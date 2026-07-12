@@ -52,50 +52,6 @@ import {
 } from "@/lib/storage";
 import { cartTotal } from "@/lib/money";
 
-/** 初回起動時だけ投入するサンプル商品（デプロイ直後から動作確認できるように） */
-const SEED_PRODUCTS: Product[] = [
-  {
-    id: 1,
-    name: "Amber mist",
-    price: 2200,
-    category: "candle",
-    active: true,
-    alertStock: 5,
-    displayOrder: 1,
-    inventory: { base: 0, event: 8, consignments: {} },
-  },
-  {
-    id: 2,
-    name: "Sunday garden",
-    price: 2400,
-    category: "candle",
-    active: true,
-    alertStock: 5,
-    displayOrder: 2,
-    inventory: { base: 0, event: 3, consignments: {} },
-  },
-  {
-    id: 3,
-    name: "Morning sachet",
-    price: 800,
-    category: "sachet",
-    active: true,
-    alertStock: 5,
-    displayOrder: 3,
-    inventory: { base: 0, event: 12, consignments: {} },
-  },
-  {
-    id: 4,
-    name: "Petal candle",
-    price: 1600,
-    category: "candle",
-    active: true,
-    alertStock: 5,
-    displayOrder: 4,
-    inventory: { base: 0, event: 1, consignments: {} },
-  },
-];
-
 /** 在庫の場所を表す文字列: "base" | "event" | "consignment:{locationId}" */
 export type StockLocation = string;
 
@@ -254,14 +210,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
   });
   const [autoStopNotice, setAutoStopNotice] = useState<string | null>(null);
 
-  // 初回マウント時に localStorage から読み込む（未初期化ならサンプルを投入）
+  // 初回マウント時に localStorage から読み込む
   useEffect(() => {
-    if (
-      typeof window !== "undefined" &&
-      window.localStorage.getItem(STORAGE_KEYS.products) === null
-    ) {
-      saveProducts(SEED_PRODUCTS);
-    }
     setProducts(loadProducts());
     setLocations(loadLocations());
     setSales(loadSales());
