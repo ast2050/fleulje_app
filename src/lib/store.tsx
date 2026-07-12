@@ -229,6 +229,12 @@ interface StoreValue {
   stopExperimentAt: (expId: string, stopTs: number) => void;
   /** 最大連続計測時間（時間）を設定する（0=無制限） */
   setMaxDurationHours: (hours: number) => void;
+
+  // --- 履歴の削除 ---
+  /** 販売履歴を削除する（sales 配列内の位置で指定） */
+  deleteSale: (index: number) => void;
+  /** 実験履歴を削除する（id で指定） */
+  deleteExpHistory: (id: string) => void;
 }
 
 const StoreContext = createContext<StoreValue | null>(null);
@@ -752,6 +758,22 @@ export function StoreProvider({ children }: { children: ReactNode }) {
     saveLabSettings(next);
   }, []);
 
+  const deleteSale = useCallback((index: number) => {
+    setSales((prev) => {
+      const next = prev.filter((_, i) => i !== index);
+      saveSales(next);
+      return next;
+    });
+  }, []);
+
+  const deleteExpHistory = useCallback((id: string) => {
+    setExpHistory((prev) => {
+      const next = prev.filter((h) => h.id !== id);
+      saveExpHistory(next);
+      return next;
+    });
+  }, []);
+
   return (
     <StoreContext.Provider
       value={{
@@ -791,6 +813,8 @@ export function StoreProvider({ children }: { children: ReactNode }) {
         completeExperiment,
         stopExperimentAt,
         setMaxDurationHours,
+        deleteSale,
+        deleteExpHistory,
       }}
     >
       {children}
